@@ -1,0 +1,106 @@
+version: '3'
+services:
+  uploader:
+    image: almatrk/uploader-backend:latest
+    container_name: uploader-service
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    depends_on:
+      - postgres_server
+      - mongo
+    environment:
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      MONGO_USERNAME: ${MONGO_USERNAME}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_HOST: ${MONGO_HOST}
+      MONGO_PORT: ${MONGO_PORT}
+      MONGO_DB: ${MONGO_DB}
+      MONGO_AUTH_SOURCE: ${MONGO_AUTH_SOURCE}
+      MINIO_URL: ${MINIO_URL}
+      MINIO_ACCESS_NAME: ${MINIO_ACCESS_NAME}
+      MINIO_ACCESS_SECRET: ${MINIO_ACCESS_SECRET}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+      VISION_SERVICE_URL: ${VISION_SERVICE_URL}
+    networks:
+      - skynet
+
+  vision-mock:
+    image: almatrk/vision-mock:latest
+    container_name: vision-mock-service
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./vision_error.json:/app/vision_error.json
+    restart: unless-stopped
+    networks:
+      - skynet
+
+  postgres_server:
+    restart: always
+    image: postgres:14
+    environment:
+      POSTGRES_DB: uploader_postgres
+      PGUSER: postgres
+      POSTGRES_PASSWORD: root
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+    networks:
+      - skynet
+
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: uploader
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    ports:
+      - "27018:27017"
+    volumes:
+      - ./mongo/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skynet
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: unless-stopped
+    volumes:
+      - "./minio/data:/data"
+      - "./minio/minio:/minio"
+      - "./minio/config:/root/.minio"
+    environment:
+      MINIO_ACCESS_KEY: "root"
+      MINIO_SECRET_KEY: "password"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    command: server /data  --console-address ":9001"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - skynet
+
+networks:
+  skynet:

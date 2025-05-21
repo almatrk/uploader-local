@@ -1,0 +1,14 @@
+{
+    "success": false,
+    "documents": [],
+    "errors": [
+      {
+        "code": "PARSE_ERROR",
+        "description": "error_message PARSE_ERROR"
+      },
+      {
+        "code": "NO_DOC",
+        "description": "error_message NO_DOC"
+      }
+    ]
+  }
