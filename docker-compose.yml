@@ -33,7 +33,7 @@ services:
     ports:
       - "8081:8081"
     volumes:
-      - ./vision_error.json:/app/vision_error.json
+      - ./vision_empty.json:/app/vision_error_1.json
     restart: unless-stopped
     networks:
       - skynet
